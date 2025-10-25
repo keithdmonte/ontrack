@@ -1,0 +1,48 @@
+name: OnTrack Core Engine Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-core-engine:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install openpyxl prophet matplotlib
+
+      - name: Create sample dataset
+        run: |
+          mkdir -p data/raw
+          cat <<EOF > data/raw/sample_sales.csv
+          order_id,order_date,product,category,quantity,price
+          1,2025-09-22,Latte,Beverage,2,200
+          2,2025-09-29,Mocha,Beverage,1,220
+          3,2025-10-06,Espresso,Beverage,1,180
+          4,2025-10-13,Cappuccino,Beverage,2,190
+          5,2025-10-20,Latte,Beverage,3,210
+          EOF
+
+      - name: Run OnTrack pipeline
+        run: |
+          python -m core_engine.prototype --input data/raw/sample_sales.csv --output-root reports --periods 4 --group-by category
+
+      - name: Verify outputs
+        run: |
+          test -f reports/metrics/summary.xlsx
+          test -f reports/trends/weekly_trends.xlsx
+          test -f reports/forecast/weekly_forecast.xlsx
